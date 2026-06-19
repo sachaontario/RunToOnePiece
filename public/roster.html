@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RunToOnePiece - Ma Collection</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f5f6fa; min-height: 100vh;
+    }
+    #nav {
+      background: #2c3e50; padding: 12px 20px; display: flex;
+      align-items: center; gap: 15px;
+    }
+    #nav a {
+      color: white; text-decoration: none; padding: 8px 18px;
+      border-radius: 20px; font-size: 0.9rem;
+    }
+    #nav a:hover { background: #34495e; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    h1 { text-align: center; color: #2c3e50; margin: 20px 0; }
+    .progress-bar {
+      background: #ddd; border-radius: 20px; height: 24px;
+      margin: 0 auto 30px; max-width: 400px; overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%; background: linear-gradient(90deg, #e74c3c, #f39c12);
+      border-radius: 20px; transition: width 0.5s;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 0.75rem; font-weight: bold;
+    }
+    .filters {
+      display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+      margin-bottom: 25px;
+    }
+    .filter-btn {
+      padding: 6px 14px; border: 2px solid #ddd; background: white;
+      border-radius: 20px; cursor: pointer; font-size: 0.8rem;
+      transition: all 0.3s;
+    }
+    .filter-btn:hover, .filter-btn.active {
+      border-color: #3498db; background: #3498db; color: white;
+    }
+    .grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 15px;
+    }
+    .card {
+      background: white; border-radius: 15px; padding: 15px;
+      text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      transition: transform 0.3s, box-shadow 0.3s; cursor: pointer;
+    }
+    .card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
+    .card.locked { opacity: 0.4; filter: grayscale(1); }
+    .card-img {
+      width: 80px; height: 80px; border-radius: 50%;
+      object-fit: cover; margin: 0 auto 10px;
+      background: #ecf0f1; border: 3px solid #ddd;
+    }
+    .card.unlocked .card-img { border-color: #e74c3c; }
+    .card-name { font-size: 0.85rem; font-weight: bold; color: #2c3e50; }
+    .card-id { font-size: 0.7rem; color: #95a5a6; }
+    .card-affiliations {
+      display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin-top: 6px;
+    }
+    .aff-badge {
+      font-size: 0.6rem; padding: 2px 8px; border-radius: 10px;
+      color: white; font-weight: bold;
+    }
+    #login-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7); z-index: 2000;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #login-overlay.hidden { display: none; }
+    .login-box {
+      background: white; border-radius: 20px; padding: 40px;
+      max-width: 400px; width: 90%; text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .login-box h2 { color: #2c3e50; margin-bottom: 10px; }
+    .login-box p { color: #7f8c8d; margin-bottom: 25px; font-size: 0.9rem; }
+    .login-box input[type="email"] {
+      width: 100%; padding: 14px 18px; border: 2px solid #ddd;
+      border-radius: 12px; font-size: 1rem; margin-bottom: 15px;
+      transition: border-color 0.3s;
+    }
+    .login-box input[type="email"]:focus { outline: none; border-color: #3498db; }
+    .login-box button {
+      width: 100%; padding: 14px; background: #e74c3c; color: white;
+      border: none; border-radius: 12px; font-size: 1rem; cursor: pointer;
+      transition: background 0.3s;
+    }
+    .login-box button:hover { background: #c0392b; }
+    .login-error { color: #e74c3c; font-size: 0.85rem; margin-top: 8px; }
+    #user-info {
+      position: fixed; top: 10px; right: 10px; z-index: 1000;
+      background: white; padding: 10px 16px; border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2); font-size: 0.85rem;
+      display: flex; align-items: center; gap: 10px;
+    }
+    #logout-btn {
+      background: none; border: none; color: #e74c3c; cursor: pointer;
+      font-size: 0.85rem; text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div id="login-overlay">
+    <div class="login-box">
+      <h2>📖 Ma Collection</h2>
+      <p>Entre ton email pour voir tes personnages découverts</p>
+      <input type="email" id="login-email" placeholder="Ton email..." />
+      <button onclick="login()">Voir mon Pokédex</button>
+      <p id="login-error" class="login-error"></p>
+    </div>
+  </div>
+
+  <div id="nav">
+    <a href="/">🏴‍☠️ Carte</a>
+    <a href="/roster">📖 Ma Collection</a>
+  </div>
+  <div id="user-info" style="display:none;">
+    <span id="user-email"></span>
+    <button id="logout-btn" onclick="logout()">Déconnexion</button>
+  </div>
+  <div class="container">
+    <h1>📖 Ma Collection</h1>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress-fill" style="width: 0%">0%</div>
+    </div>
+    <div class="filters" id="filters"></div>
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <script>
+    let allCharacters = [];
+    let capturedIds = [];
+    let currentFilter = 'all';
+    const affColors = {
+      "Straw Hat Pirates": "#e74c3c",
+      "Yonkō": "#8e44ad",
+      "Cross Guild": "#e67e22",
+      "Kid Pirates": "#e74c3c",
+      "Shichibukai": "#2ecc71",
+      "Marines": "#3498db",
+      "Révolution": "#e74c3c",
+      "Roger Pirates": "#f1c40f",
+      "Whitebeard Pirates": "#2c3e50",
+      "Blackbeard Pirates": "#1a1a2e",
+      "Beasts Pirates": "#8e44ad",
+      "Big Mom Pirates": "#e91e63",
+      "Worst Generation": "#9b59b6",
+      "CP0": "#7f8c8d",
+      "Wano": "#2c3e50",
+      "Zō": "#f39c12",
+      "Fish-Man": "#3498db",
+      "Alabasta": "#f39c12",
+      "Ryugu": "#2980b9",
+      "Dressrosa": "#e74c3c",
+      "Donquixote Pirates": "#e74c3c",
+      "Straw Hat Fleet": "#3498db",
+      "Germa": "#ecf0f1",
+      "Hegghead": "#3498db",
+      "Elbaph": "#2ecc71",
+      "Gouvernement Mondial": "#1a1a2e",
+      "Skypiea": "#f1c40f",
+      "Rock Pirates": "#7f8c8d"
+    };
+
+    async function login() {
+      const email = document.getElementById('login-email').value.trim();
+      const errEl = document.getElementById('login-error');
+      if (!email || !email.includes('@')) {
+        errEl.textContent = 'Entre un email valide';
+        return;
+      }
+      localStorage.setItem('onepiece-email', email);
+      try {
+        const res = await fetch('/api/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        document.getElementById('login-overlay').classList.add('hidden');
+        document.getElementById('user-info').style.display = 'flex';
+        document.getElementById('user-email').textContent = email;
+        await init();
+      } catch (e) {
+        errEl.textContent = e.message;
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const saved = localStorage.getItem('onepiece-email');
+      if (saved) document.getElementById('login-email').value = saved;
+    });
+
+    function logout() {
+      fetch('/api/logout', { method: 'POST' });
+      document.getElementById('login-overlay').classList.remove('hidden');
+      document.getElementById('user-info').style.display = 'none';
+      document.getElementById('login-email').value = '';
+      capturedIds = [];
+      document.getElementById('grid').innerHTML = '';
+      document.getElementById('filters').innerHTML = '';
+      const fill = document.getElementById('progress-fill');
+      fill.style.width = '0%';
+      fill.textContent = '0%';
+    }
+
+    async function init() {
+      const [charsRes, capturesRes] = await Promise.all([
+        fetch('/api/characters'),
+        fetch('/api/user/captures')
+      ]);
+      allCharacters = await charsRes.json();
+      capturedIds = await capturesRes.json();
+      renderFilters();
+      renderGrid();
+    }
+
+    function renderFilters() {
+      const unlockedAffiliations = [...new Set(
+        allCharacters.filter(c => capturedIds.includes(c.id))
+          .map(c => Array.isArray(c.affiliation) ? c.affiliation : [c.affiliation])
+          .flat()
+      )];
+      const container = document.getElementById('filters');
+      container.innerHTML = '';
+      if (unlockedAffiliations.length === 0) return;
+      const allBtn = document.createElement('button');
+      allBtn.className = 'filter-btn active';
+      allBtn.textContent = 'Tous';
+      allBtn.onclick = () => setFilter('all', allBtn);
+      container.appendChild(allBtn);
+      unlockedAffiliations.forEach(aff => {
+        const btn = document.createElement('button');
+        btn.className = 'filter-btn';
+        btn.textContent = aff;
+        btn.onclick = () => setFilter(aff, btn);
+        container.appendChild(btn);
+      });
+    }
+
+    function setFilter(filter, btn) {
+      currentFilter = filter;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderGrid();
+    }
+
+    function renderGrid() {
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+      const filtered = currentFilter === 'all'
+        ? allCharacters
+        : allCharacters.filter(c => {
+            const affs = Array.isArray(c.affiliation) ? c.affiliation : [c.affiliation];
+            return affs.includes(currentFilter);
+          });
+      filtered.forEach(c => {
+        const unlocked = capturedIds.includes(c.id);
+        const card = document.createElement('div');
+        card.className = `card ${unlocked ? 'unlocked' : 'locked'}`;
+        card.innerHTML = `
+          <img class="card-img" src="/avatars/${c.id}.webp" alt="${c.name}" onerror="this.src='data:image/svg+xml,<svg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'80\\' height=\\'80\\'><rect width=\\'80\\' height=\\'80\\' fill=\\'${encodeURIComponent(c.color)}\\'/><text x=\\'40\\' y=\\'48\\' text-anchor=\\'middle\\' fill=\\'white\\' font-size=\\'30\\'>${c.name.charAt(0)}</text></svg>'" />
+          <p class="card-id">#${String(c.id).padStart(3, '0')}</p>
+          <p class="card-name">${unlocked ? c.name : '???'}</p>
+          <div class="card-affiliations">${unlocked ? (Array.isArray(c.affiliation) ? c.affiliation.map(a => `<span class="aff-badge" style="background:${affColors[a] || c.color}">${a}</span>`).join('') : `<span class="aff-badge" style="background:${affColors[c.affiliation] || c.color}">${c.affiliation}</span>`) : '<span style="color:#95a5a6; font-size:0.7rem;">???</span>'}</div>
+        `;
+        grid.appendChild(card);
+      });
+      const pct = Math.round((capturedIds.length / 100) * 100);
+      const fill = document.getElementById('progress-fill');
+      fill.style.width = pct + '%';
+      fill.textContent = pct + '%';
+    }
+
+    document.getElementById('login-email').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') login();
+    });
+  </script>
+</body>
+</html>

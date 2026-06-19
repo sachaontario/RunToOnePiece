@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RunToOnePiece - Découverte GPS</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    }
+    .container {
+      background: white; border-radius: 20px; padding: 40px;
+      max-width: 420px; width: 90%; text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    h1 { color: #2c3e50; margin-bottom: 10px; }
+    .subtitle { color: #7f8c8d; margin-bottom: 30px; }
+    .step { display: none; }
+    .step.active { display: block; }
+    input[type="email"] {
+      width: 100%; padding: 14px 18px; border: 2px solid #ddd;
+      border-radius: 12px; font-size: 1rem; margin-bottom: 15px;
+      transition: border-color 0.3s;
+    }
+    input[type="email"]:focus { outline: none; border-color: #3498db; }
+    button {
+      width: 100%; padding: 14px; background: #e74c3c; color: white;
+      border: none; border-radius: 12px; font-size: 1rem; cursor: pointer;
+      transition: background 0.3s; margin-bottom: 10px;
+    }
+    button:hover { background: #c0392b; }
+    button:disabled { background: #bdc3c7; cursor: not-allowed; }
+    .error { color: #e74c3c; font-size: 0.85rem; margin-top: 8px; }
+    .nearby-list {
+      text-align: left; margin: 20px 0;
+    }
+    .nearby-item {
+      padding: 12px 16px; background: #f8f9fa; border-radius: 10px;
+      margin-bottom: 8px; display: flex; justify-content: space-between;
+      align-items: center; cursor: pointer; transition: all 0.3s;
+    }
+    .nearby-item:hover { background: #e9ecef; }
+    .nearby-item.in-range { background: #d4edda; border: 2px solid #28a745; }
+    .nearby-item.in-range:hover { background: #c3e6cb; }
+    .nearby-name { font-weight: bold; color: #2c3e50; }
+    .nearby-distance { font-size: 0.85rem; color: #7f8c8d; }
+    .nearby-item.in-range .nearby-distance { color: #28a745; font-weight: bold; }
+    .gps-status {
+      padding: 10px; border-radius: 10px; margin-bottom: 15px;
+      font-size: 0.9rem;
+    }
+    .gps-status.searching { background: #fff3cd; color: #856404; }
+    .gps-status.ready { background: #d4edda; color: #155724; }
+    .gps-status.error { background: #f8d7da; color: #721c24; }
+
+    /* Lottery animation */
+    .lottery { perspective: 1000px; }
+    .ticket {
+      width: 200px; height: 120px; margin: 30px auto;
+      background: linear-gradient(135deg, #f39c12, #e74c3c);
+      border-radius: 15px; display: flex; align-items: center;
+      justify-content: center; color: white; font-size: 1.5rem;
+      font-weight: bold; cursor: pointer;
+      transform-style: preserve-3d; transition: transform 0.8s;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    .ticket.flipped { transform: rotateY(180deg); }
+    .card-reveal {
+      display: none; animation: fadeIn 0.5s ease;
+    }
+    .card-reveal.show { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+    .card-img {
+      width: 150px; height: 150px; border-radius: 50%;
+      object-fit: cover; border: 4px solid #e74c3c;
+      margin: 15px auto; display: block;
+      background: #ecf0f1;
+    }
+    .card-name { font-size: 1.3rem; color: #2c3e50; font-weight: bold; }
+    .card-affiliation { color: #7f8c8d; margin: 5px 0 15px; }
+    .card-badge {
+      display: inline-block; padding: 6px 16px; border-radius: 20px;
+      color: white; font-size: 0.85rem; margin-bottom: 15px;
+    }
+    .new-badge { background: #2ecc71; }
+    .old-badge { background: #95a5a6; }
+    .confetti {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; z-index: 9999;
+    }
+    .back-link {
+      display: inline-block; margin-top: 20px; color: #3498db;
+      text-decoration: none; font-size: 0.9rem;
+    }
+    .back-link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🏴‍☠️ RunToOnePiece</h1>
+    <p class="subtitle">Approche d'un personnage pour le découvrir</p>
+
+    <div id="step-auth" class="step active">
+      <input type="email" id="email" placeholder="Ton email..." />
+      <button onclick="auth()">Continuer</button>
+      <p id="auth-error" class="error"></p>
+    </div>
+
+    <div id="step-gps" class="step">
+      <div id="gps-status" class="gps-status searching">📡 Recherche de ta position...</div>
+      <div id="nearby-list" class="nearby-list"></div>
+      <button onclick="startGPS()" id="refresh-btn" style="display:none;">🔄 Rafraîchir</button>
+    </div>
+
+    <div id="step-lottery" class="step">
+      <p>🎰 Clique sur le ticket pour révéler ton personnage !</p>
+      <div class="lottery">
+        <div class="ticket" id="ticket" onclick="flipTicket()">
+          🎫
+        </div>
+      </div>
+    </div>
+
+    <div id="step-reveal" class="step">
+      <div class="card-reveal" id="card-reveal">
+        <img id="card-img" class="card-img" src="" alt="" />
+        <p class="card-name" id="card-name"></p>
+        <p class="card-affiliation" id="card-affiliation"></p>
+        <span id="card-badge" class="card-badge"></span>
+        <br />
+        <a href="/roster" class="back-link">📖 Voir ma Collection</a>
+        <br />
+        <a href="/" class="back-link">🗺️ Retour à la carte</a>
+      </div>
+    </div>
+  </div>
+
+  <canvas id="confetti" class="confetti"></canvas>
+
+  <script>
+    let selectedCharId = null;
+    let userLat = null, userLon = null;
+    const RANGE_METERS = 15;
+
+    async function auth() {
+      const email = document.getElementById('email').value.trim();
+      const errEl = document.getElementById('auth-error');
+      if (!email || !email.includes('@')) {
+        errEl.textContent = 'Entre un email valide';
+        return;
+      }
+      localStorage.setItem('onepiece-email', email);
+      try {
+        const res = await fetch('/api/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        showStep('step-gps');
+        startGPS();
+      } catch (e) {
+        errEl.textContent = e.message;
+      }
+    }
+
+    function showStep(id) {
+      document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
+
+    function haversineDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371e3;
+      const φ1 = lat1 * Math.PI / 180;
+      const φ2 = lat2 * Math.PI / 180;
+      const Δφ = (lat2 - lat1) * Math.PI / 180;
+      const Δλ = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                Math.cos(φ1) * Math.cos(φ2) *
+                Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
+
+    async function startGPS() {
+      const statusEl = document.getElementById('gps-status');
+      const listEl = document.getElementById('nearby-list');
+      const refreshBtn = document.getElementById('refresh-btn');
+
+      if (!navigator.geolocation) {
+        statusEl.className = 'gps-status error';
+        statusEl.textContent = '❌ Géolocalisation non supportée';
+        return;
+      }
+
+      statusEl.className = 'gps-status searching';
+      statusEl.textContent = '📡 Recherche de ta position...';
+      listEl.innerHTML = '';
+      refreshBtn.style.display = 'none';
+
+      navigator.geolocation.getCurrentPosition(async (pos) => {
+        const userLat = pos.coords.latitude;
+        const userLon = pos.coords.longitude;
+        window.userLat = userLat;
+        window.userLon = userLon;
+
+        try {
+          const [charsRes, capturesRes] = await Promise.all([
+            fetch('/api/characters'),
+            fetch('/api/user/captures')
+          ]);
+          const characters = await charsRes.json();
+          const capturedIds = await capturesRes.json();
+
+          const withDistance = characters.map(c => ({
+            ...c,
+            distance: haversineDistance(userLat, userLon, c.lat, c.lon)
+          })).sort((a, b) => a.distance - b.distance);
+
+          const nearby = withDistance.filter(c => c.distance <= 100);
+          const inRange = withDistance.filter(c => c.distance <= RANGE_METERS);
+
+          statusEl.className = 'gps-status ready';
+          statusEl.textContent = `📍 Position trouvée ! ${inRange.length} personnage(s) à portée`;
+          refreshBtn.style.display = 'block';
+
+          if (nearby.length === 0) {
+            listEl.innerHTML = '<p style="color:#7f8c8d;">Aucun personnage dans 100m. Continue ta recherche !</p>';
+            return;
+          }
+
+          nearby.forEach(c => {
+            const item = document.createElement('div');
+            const inRangeClass = c.distance <= RANGE_METERS ? 'in-range' : '';
+            const captured = capturedIds.includes(c.id);
+            item.className = `nearby-item ${inRangeClass}`;
+            item.innerHTML = `
+              <span class="nearby-name">${captured ? '✅' : '🔒'} #${String(c.id).padStart(3, '0')}</span>
+              <span class="nearby-distance">${Math.round(c.distance)}m ${c.distance <= RANGE_METERS ? '✨' : ''}</span>
+            `;
+            if (c.distance <= RANGE_METERS) {
+              item.onclick = () => {
+                selectedCharId = c.id;
+                showStep('step-lottery');
+              };
+            }
+            listEl.appendChild(item);
+          });
+
+          if (inRange.length > 0) {
+            setTimeout(() => {
+              selectedCharId = inRange[0].id;
+              showStep('step-lottery');
+            }, 1500);
+          }
+        } catch (e) {
+          statusEl.className = 'gps-status error';
+          statusEl.textContent = '❌ Erreur lors de la récupération des personnages';
+        }
+      }, (err) => {
+        statusEl.className = 'gps-status error';
+        statusEl.textContent = '❌ Impossible de récupérer ta position. Autorise la géolocalisation.';
+        refreshBtn.style.display = 'block';
+      }, { enableHighAccuracy: true, timeout: 10000 });
+    }
+
+    async function flipTicket() {
+      const ticket = document.getElementById('ticket');
+      ticket.classList.add('flipped');
+
+      setTimeout(async () => {
+        const res = await fetch('/api/capture', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            characterId: selectedCharId,
+            lat: window.userLat,
+            lon: window.userLon
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error);
+          ticket.classList.remove('flipped');
+          showStep('step-gps');
+          return;
+        }
+        showCard(data.character, data.success);
+      }, 800);
+    }
+
+    function showCard(c, isNew) {
+      showStep('step-reveal');
+      document.getElementById('card-img').src = `/avatars/${c.id}.webp`;
+      document.getElementById('card-img').onerror = function() {
+        this.src = `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='150'><rect width='150' height='150' fill='${encodeURIComponent(c.color)}'/><text x='75' y='85' text-anchor='middle' fill='white' font-size='60'>${c.name.charAt(0)}</text></svg>`;
+      };
+      document.getElementById('card-name').textContent = c.name;
+      const affs = Array.isArray(c.affiliation) ? c.affiliation.join(', ') : c.affiliation;
+      document.getElementById('card-affiliation').textContent = affs;
+      const badge = document.getElementById('card-badge');
+      badge.textContent = isNew ? '✨ Nouveau !' : '📚 Déjà découvert';
+      badge.className = `card-badge ${isNew ? 'new-badge' : 'old-badge'}`;
+      document.getElementById('card-reveal').classList.add('show');
+      if (isNew) launchConfetti();
+    }
+
+    function launchConfetti() {
+      const canvas = document.getElementById('confetti');
+      const ctx = canvas.getContext('2d');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      const pieces = [];
+      const colors = ['#e74c3c', '#3498db', '#f1c40f', '#2ecc71', '#9b59b6', '#e91e63'];
+      for (let i = 0; i < 150; i++) {
+        pieces.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height - canvas.height,
+          w: Math.random() * 10 + 5,
+          h: Math.random() * 6 + 3,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          vy: Math.random() * 4 + 2,
+          vx: Math.random() * 4 - 2,
+          rot: Math.random() * 360,
+          vr: Math.random() * 10 - 5
+        });
+      }
+      let frame = 0;
+      function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        pieces.forEach(p => {
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rot * Math.PI / 180);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+          ctx.restore();
+          p.y += p.vy;
+          p.x += p.vx;
+          p.rot += p.vr;
+        });
+        frame++;
+        if (frame < 180) requestAnimationFrame(animate);
+        else ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+      animate();
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const saved = localStorage.getItem('onepiece-email');
+      if (saved) document.getElementById('email').value = saved;
+    });
+
+    document.getElementById('email').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') auth();
+    });
+  </script>
+</body>
+</html>
