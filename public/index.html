@@ -15,8 +15,23 @@
       display: flex; align-items: center; justify-content: center;
       color: white; font-weight: bold; border: 2px solid white;
       box-shadow: 0 2px 6px rgba(0,0,0,0.3); cursor: pointer;
+      transition: all 0.3s;
     }
     .custom-marker:hover { transform: scale(1.2); }
+    .custom-marker.nearby {
+      animation: pulse 1.5s infinite;
+      border: 3px solid #2ecc71;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(46, 204, 113, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); }
+    }
+    .gps-marker {
+      width: 18px; height: 18px; background: #3498db;
+      border-radius: 50%; border: 3px solid white;
+      box-shadow: 0 0 10px rgba(52, 152, 219, 0.8);
+    }
     #nav {
       position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
       z-index: 1000; display: flex; gap: 10px;
@@ -74,6 +89,11 @@
       background: none; border: none; color: #e74c3c; cursor: pointer;
       font-size: 0.85rem; text-decoration: underline;
     }
+    .capture-btn {
+      background: #2ecc71; color: white; border: none; padding: 8px 16px;
+      border-radius: 20px; cursor: pointer; font-size: 0.85rem; margin-top: 8px;
+    }
+    .capture-btn:hover { background: #27ae60; }
   </style>
 </head>
 <body>
@@ -100,15 +120,19 @@
   <div id="map"></div>
 
   <script>
-    const map = L.map('map').setView([48.11, -1.20], 12);
+    const map = L.map('map');
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap'
     }).addTo(map);
 
     let capturedIds = [];
+    let allCharacters = [];
     const seenAffiliations = new Set();
     const affiliationColors = {};
     let markers = [];
+    let gpsMarker = null;
+    let userLat = null, userLon = null;
+    const RANGE_METERS = 15;
     const affColors = {
       "Straw Hat Pirates": "#e74c3c",
       "Yonkō": "#8e44ad",
@@ -140,6 +164,18 @@
       "Rock Pirates": "#7f8c8d"
     };
 
+    function haversineDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371e3;
+      const φ1 = lat1 * Math.PI / 180;
+      const φ2 = lat2 * Math.PI / 180;
+      const Δφ = (lat2 - lat1) * Math.PI / 180;
+      const Δλ = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                Math.cos(φ1) * Math.cos(φ2) *
+                Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
     async function login() {
       const email = document.getElementById('login-email').value.trim();
       const errEl = document.getElementById('login-error');
@@ -160,6 +196,7 @@
         document.getElementById('user-info').style.display = 'flex';
         document.getElementById('user-email').textContent = email;
         loadCaptures();
+        startGPS();
       } catch (e) {
         errEl.textContent = e.message;
       }
@@ -177,6 +214,7 @@
       document.getElementById('login-email').value = '';
       capturedIds = [];
       clearMarkers();
+      if (gpsMarker) map.removeLayer(gpsMarker);
       document.getElementById('progress').textContent = '0 / 100 découverts';
       document.getElementById('legend').innerHTML = '';
     }
@@ -186,51 +224,125 @@
       markers = [];
     }
 
+    function startGPS() {
+      if (!navigator.geolocation) return;
+
+      navigator.geolocation.watchPosition((pos) => {
+        userLat = pos.coords.latitude;
+        userLon = pos.coords.longitude;
+
+        if (gpsMarker) map.removeLayer(gpsMarker);
+        const gpsIcon = L.divIcon({
+          className: '',
+          html: '<div class="gps-marker"></div>',
+          iconSize: [18, 18]
+        });
+        gpsMarker = L.marker([userLat, userLon], { icon: gpsIcon })
+          .bindPopup('📍 Ta position')
+          .addTo(map);
+
+        updateMarkers();
+      }, null, { enableHighAccuracy: true });
+    }
+
     async function loadCaptures() {
-      const res = await fetch('/api/user/captures');
-      capturedIds = await res.json();
+      const [capturesRes, charsRes] = await Promise.all([
+        fetch('/api/user/captures'),
+        fetch('/api/characters')
+      ]);
+      capturedIds = await capturesRes.json();
+      allCharacters = await charsRes.json();
       document.getElementById('progress').textContent = `${capturedIds.length} / 100 découverts`;
       loadMap();
     }
 
     function loadMap() {
-      fetch('/api/characters')
-        .then(r => r.json())
-        .then(charList => {
-          charList.forEach(c => {
-            const isUnlocked = capturedIds.includes(c.id);
-            const color = isUnlocked ? c.color : "#555";
-            const icon = L.divIcon({
-              className: '',
-              html: `<div class="custom-marker" style="background:${color}; font-size:10px;">${isUnlocked ? '' : '???'}</div>`,
-              iconSize: [30, 30]
-            });
+      allCharacters.forEach(c => {
+        const marker = createMarker(c);
+        markers.push(marker);
+      });
 
-            const marker = L.marker([c.lat, c.lon], { icon })
-              .bindPopup(`
-                <div style="text-align:center; min-width:150px;">
-                  <h3 style="margin:0; color:#333;">${isUnlocked ? c.name : '??? #???'}</h3>
-                  <div style="display:flex; flex-wrap:wrap; gap:4px; justify-content:center; margin:5px 0;">${isUnlocked ? (Array.isArray(c.affiliation) ? c.affiliation.map(a => `<span style="font-size:0.7rem; padding:2px 8px; border-radius:10px; color:white; background:${affColors[a] || c.color};">${a}</span>`).join('') : `<span style="font-size:0.7rem; padding:2px 8px; border-radius:10px; color:white; background:${affColors[c.affiliation] || c.color};">${c.affiliation}</span>`) : '<span style="color:#999; font-size:0.8rem;">Affiliation inconnue</span>'}</div>
-                  ${isUnlocked ? '<span style="color:#2ecc71; font-size:0.85rem;">✅ Découvert</span>' : '<p style="color:#999; font-size:0.8rem; margin-top:8px;">🔒 Scanne un QR Code pour révéler</p>'}
-                </div>
-              `)
-              .addTo(map);
-            markers.push(marker);
+      const bounds = L.latLngBounds(allCharacters.map(c => [c.lat, c.lon]));
+      map.fitBounds(bounds, { padding: [50, 50] });
+      updateLegend();
+    }
 
-            const affs = Array.isArray(c.affiliation) ? c.affiliation : [c.affiliation];
-            affs.forEach(aff => {
-              if (isUnlocked && !seenAffiliations.has(aff)) {
-                seenAffiliations.add(aff);
-                affiliationColors[aff] = c.color;
-                const legend = document.getElementById('legend');
-                const item = document.createElement('div');
-                item.className = 'legend-item';
-                item.innerHTML = `<span class="legend-dot" style="background:${c.color}"></span>${aff}`;
-                legend.appendChild(item);
-              }
-            });
+    function createMarker(c) {
+      const isUnlocked = capturedIds.includes(c.id);
+      const isNearby = userLat && haversineDistance(userLat, userLon, c.lat, c.lon) <= RANGE_METERS;
+      const color = isUnlocked || isNearby ? c.color : "#555";
+      const nearbyClass = isNearby && !isUnlocked ? 'nearby' : '';
+
+      const icon = L.divIcon({
+        className: '',
+        html: `<div class="custom-marker ${nearbyClass}" style="background:${color}; font-size:10px;">${isUnlocked ? '' : (isNearby ? '✨' : '???')}</div>`,
+        iconSize: [30, 30]
+      });
+
+      const popupContent = `
+        <div style="text-align:center; min-width:150px;">
+          <h3 style="margin:0; color:#333;">${isUnlocked || isNearby ? c.name : '??? #???'}</h3>
+          <div style="display:flex; flex-wrap:wrap; gap:4px; justify-content:center; margin:5px 0;">${isUnlocked || isNearby ? (Array.isArray(c.affiliation) ? c.affiliation.map(a => `<span style="font-size:0.7rem; padding:2px 8px; border-radius:10px; color:white; background:${affColors[a] || c.color};">${a}</span>`).join('') : `<span style="font-size:0.7rem; padding:2px 8px; border-radius:10px; color:white; background:${affColors[c.affiliation] || c.color};">${c.affiliation}</span>`) : '<span style="color:#999; font-size:0.8rem;">Affiliation inconnue</span>'}</div>
+          ${isUnlocked ? '<span style="color:#2ecc71; font-size:0.85rem;">✅ Découvert</span>' : (isNearby ? '<button class="capture-btn" onclick="captureCharacter(' + c.id + ')">🔓 Déverrouiller</button>' : '<p style="color:#999; font-size:0.8rem; margin-top:8px;">🔒 Approche pour déverrouiller</p>')}
+        </div>
+      `;
+
+      return L.marker([c.lat, c.lon], { icon })
+        .bindPopup(popupContent)
+        .addTo(map);
+    }
+
+    function updateMarkers() {
+      clearMarkers();
+      allCharacters.forEach(c => {
+        const marker = createMarker(c);
+        markers.push(marker);
+      });
+      updateLegend();
+    }
+
+    async function captureCharacter(id) {
+      if (!userLat || !userLon) {
+        alert('Position GPS non disponible');
+        return;
+      }
+      const res = await fetch('/api/capture', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          characterId: id,
+          lat: userLat,
+          lon: userLon
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error);
+        return;
+      }
+      capturedIds.push(id);
+      document.getElementById('progress').textContent = `${capturedIds.length} / 100 découverts`;
+      map.closePopup();
+      updateMarkers();
+    }
+
+    function updateLegend() {
+      document.getElementById('legend').innerHTML = '';
+      seenAffiliations.clear();
+      allCharacters.forEach(c => {
+        if (!capturedIds.includes(c.id)) return;
+        const affs = Array.isArray(c.affiliation) ? c.affiliation : [c.affiliation];
+        affs.forEach(aff => {
+          if (!seenAffiliations.has(aff)) {
+            seenAffiliations.add(aff);
+            const legend = document.getElementById('legend');
+            const item = document.createElement('div');
+            item.className = 'legend-item';
+            item.innerHTML = `<span class="legend-dot" style="background:${c.color}"></span>${aff}`;
+            legend.appendChild(item);
+          }
         });
-    });
+      });
     }
 
     document.getElementById('login-email').addEventListener('keypress', (e) => {
