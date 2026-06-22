@@ -89,6 +89,13 @@
       background: none; border: none; color: #e74c3c; cursor: pointer;
       font-size: 0.85rem; text-decoration: underline;
     }
+    #gps-refresh {
+      position: fixed; top: 100px; right: 10px; z-index: 1000;
+      background: white; padding: 8px 12px; border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2); font-size: 0.8rem;
+      cursor: pointer; border: none;
+    }
+    #gps-refresh:hover { background: #f0f0f0; }
     .capture-btn {
       background: #2ecc71; color: white; border: none; padding: 8px 16px;
       border-radius: 20px; cursor: pointer; font-size: 0.85rem; margin-top: 8px;
@@ -115,6 +122,7 @@
     <span id="user-email"></span>
     <button id="logout-btn" onclick="logout()">Déconnexion</button>
   </div>
+  <button id="gps-refresh" onclick="refreshGPS()" style="display:none;">🔄 GPS</button>
   <div id="progress">0 / 100 découverts</div>
   <div id="legend"></div>
   <div id="map"></div>
@@ -194,6 +202,7 @@
         if (!res.ok) throw new Error(data.error);
         document.getElementById('login-overlay').classList.add('hidden');
         document.getElementById('user-info').style.display = 'flex';
+        document.getElementById('gps-refresh').style.display = 'block';
         document.getElementById('user-email').textContent = email;
         loadCaptures();
         startGPS();
@@ -211,6 +220,7 @@
       fetch('/api/logout', { method: 'POST' });
       document.getElementById('login-overlay').classList.remove('hidden');
       document.getElementById('user-info').style.display = 'none';
+      document.getElementById('gps-refresh').style.display = 'none';
       document.getElementById('login-email').value = '';
       capturedIds = [];
       clearMarkers();
@@ -242,7 +252,32 @@
           .addTo(map);
 
         updateMarkers();
-      }, null, { enableHighAccuracy: true });
+      }, (err) => {
+        console.error('GPS error:', err);
+      }, {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 5000
+      });
+    }
+
+    function refreshGPS() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition((pos) => {
+          userLat = pos.coords.latitude;
+          userLon = pos.coords.longitude;
+          if (gpsMarker) map.removeLayer(gpsMarker);
+          const gpsIcon = L.divIcon({
+            className: '',
+            html: '<div class="gps-marker"></div>',
+            iconSize: [18, 18]
+          });
+          gpsMarker = L.marker([userLat, userLon], { icon: gpsIcon })
+            .bindPopup('📍 Ta position')
+            .addTo(map);
+          updateMarkers();
+        }, null, { enableHighAccuracy: true, maximumAge: 0 });
+      }
     }
 
     async function loadCaptures() {
