@@ -99,7 +99,7 @@ app.post("/api/capture", (req, res) => {
               Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
     const distance = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-    if (distance > 15) {
+    if (distance > 30) {
       return res.status(403).json({ error: "Trop loin ! Approche du personnage." });
     }
   }
