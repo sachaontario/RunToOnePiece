@@ -121,6 +121,32 @@
   <script>
     const ADMIN_PASSWORD = 'OnePiece@314159';
 
+    window.addEventListener('DOMContentLoaded', () => {
+      const saved = localStorage.getItem('onepiece-email');
+      if (saved) {
+        autoLogin(saved);
+      }
+    });
+
+    async function autoLogin(email) {
+      try {
+        const res = await fetch('/api/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        
+        if (email !== 'xxwarkelxx@gmail.com') {
+          window.location.href = '/';
+          return;
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
     async function checkPassword() {
       const password = document.getElementById('admin-password').value;
       const errEl = document.getElementById('password-error');
