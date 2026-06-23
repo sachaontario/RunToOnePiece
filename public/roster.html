@@ -195,14 +195,6 @@
       }
     }
 
-    window.addEventListener('DOMContentLoaded', () => {
-      const saved = localStorage.getItem('onepiece-email');
-      if (saved) {
-        document.getElementById('login-email').value = saved;
-        autoLogin(saved);
-      }
-    });
-
     async function autoLogin(email) {
       try {
         const res = await fetch('/api/auth', {
@@ -220,6 +212,14 @@
         document.getElementById('login-error').textContent = e.message;
       }
     }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const saved = localStorage.getItem('onepiece-email');
+      if (saved) {
+        document.getElementById('login-email').value = saved;
+        autoLogin(saved);
+      }
+    });
 
     function logout() {
       fetch('/api/logout', { method: 'POST' });
