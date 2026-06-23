@@ -246,8 +246,32 @@
 
     window.addEventListener('DOMContentLoaded', () => {
       const saved = localStorage.getItem('onepiece-email');
-      if (saved) document.getElementById('login-email').value = saved;
+      if (saved) {
+        document.getElementById('login-email').value = saved;
+        autoLogin(saved);
+      }
     });
+
+    async function autoLogin(email) {
+      try {
+        const res = await fetch('/api/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        document.getElementById('welcome-overlay').classList.add('hidden');
+        document.getElementById('login-overlay').classList.add('hidden');
+        document.getElementById('user-info').style.display = 'flex';
+        document.getElementById('gps-refresh').style.display = 'block';
+        document.getElementById('user-email').textContent = email;
+        loadCaptures();
+        startGPS();
+      } catch (e) {
+        document.getElementById('login-error').textContent = e.message;
+      }
+    }
 
     function logout() {
       fetch('/api/logout', { method: 'POST' });
