@@ -87,7 +87,7 @@ app.post("/api/auth", (req, res) => {
     createUser.run(id, email);
     user = { id, email };
   }
-  res.cookie("userId", user.id, { httpOnly: true, maxAge: 365 * 24 * 60 * 60 * 1000 });
+  res.cookie("userId", user.id, { httpOnly: true, maxAge: 365 * 24 * 60 * 60 * 1000, sameSite: 'lax' });
 
   if (email === "xxwarkelxx@gmail.com") {
     characters.forEach(c => captureCharacter.run(user.id, c.id));
