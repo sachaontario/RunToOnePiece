@@ -139,11 +139,10 @@
         if (!res.ok) throw new Error(data.error);
         
         if (email !== 'xxwarkelxx@gmail.com') {
-          window.location.href = '/';
-          return;
+          setTimeout(() => { window.location.href = '/'; }, 500);
         }
       } catch (e) {
-        window.location.href = '/';
+        setTimeout(() => { window.location.href = '/'; }, 500);
       }
     }
 
@@ -152,6 +151,11 @@
       const errEl = document.getElementById('password-error');
       
       if (password === ADMIN_PASSWORD) {
+        const saved = localStorage.getItem('onepiece-email');
+        if (saved !== 'xxwarkelxx@gmail.com') {
+          errEl.textContent = 'Accès réservé à l\'administrateur';
+          return;
+        }
         document.getElementById('password-overlay').classList.add('hidden');
         await loadAdminData();
       } else {
