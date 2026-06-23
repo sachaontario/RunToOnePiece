@@ -21,34 +21,6 @@
     #nav a:hover { background: #34495e; }
     .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
     h1 { text-align: center; color: #2c3e50; margin: 20px 0; }
-    
-    #password-overlay {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.7); z-index: 2000;
-      display: flex; align-items: center; justify-content: center;
-    }
-    #password-overlay.hidden { display: none; }
-    .password-box {
-      background: white; border-radius: 20px; padding: 40px;
-      max-width: 400px; width: 90%; text-align: center;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-    }
-    .password-box h2 { color: #2c3e50; margin-bottom: 10px; }
-    .password-box p { color: #7f8c8d; margin-bottom: 25px; font-size: 0.9rem; }
-    .password-box input[type="password"] {
-      width: 100%; padding: 14px 18px; border: 2px solid #ddd;
-      border-radius: 12px; font-size: 1rem; margin-bottom: 15px;
-      transition: border-color 0.3s;
-    }
-    .password-box input[type="password"]:focus { outline: none; border-color: #3498db; }
-    .password-box button {
-      width: 100%; padding: 14px; background: #e74c3c; color: white;
-      border: none; border-radius: 12px; font-size: 1rem; cursor: pointer;
-      transition: background 0.3s;
-    }
-    .password-box button:hover { background: #c0392b; }
-    .error { color: #e74c3c; font-size: 0.85rem; margin-top: 8px; }
-    
     .stats-grid {
       display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
       gap: 15px; margin-bottom: 30px;
@@ -82,16 +54,6 @@
   </style>
 </head>
 <body>
-  <div id="password-overlay">
-    <div class="password-box">
-      <h2>🔒 Administration</h2>
-      <p>Entre le mot de passe pour accéder au panneau d'administration</p>
-      <input type="password" id="admin-password" placeholder="Mot de passe..." />
-      <button onclick="checkPassword()">Accéder</button>
-      <p id="password-error" class="error"></p>
-    </div>
-  </div>
-
   <div id="nav">
     <a href="/">🏴‍☠️ Carte</a>
     <a href="/roster">📖 Ma Collection</a>
@@ -119,12 +81,12 @@
   </div>
 
   <script>
-    const ADMIN_PASSWORD = 'OnePiece314159';
-
     window.addEventListener('DOMContentLoaded', () => {
       const saved = localStorage.getItem('onepiece-email');
       if (saved) {
         autoLogin(saved);
+      } else {
+        window.location.href = '/';
       }
     });
 
@@ -140,26 +102,11 @@
         
         if (email !== 'xxwarkelxx@gmail.com') {
           setTimeout(() => { window.location.href = '/'; }, 500);
-        }
-      } catch (e) {
-        setTimeout(() => { window.location.href = '/'; }, 500);
-      }
-    }
-
-    async function checkPassword() {
-      const password = document.getElementById('admin-password').value;
-      const errEl = document.getElementById('password-error');
-      
-      if (password === ADMIN_PASSWORD) {
-        const saved = localStorage.getItem('onepiece-email');
-        if (saved !== 'xxwarkelxx@gmail.com') {
-          errEl.textContent = 'Accès réservé à l\'administrateur';
           return;
         }
-        document.getElementById('password-overlay').classList.add('hidden');
-        await loadAdminData();
-      } else {
-        errEl.textContent = 'Mot de passe incorrect';
+        loadAdminData();
+      } catch (e) {
+        setTimeout(() => { window.location.href = '/'; }, 500);
       }
     }
 
@@ -219,9 +166,6 @@
       });
     }
 
-    document.getElementById('admin-password').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') checkPassword();
-    });
   </script>
 </body>
 </html>
