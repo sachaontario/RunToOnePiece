@@ -53,6 +53,26 @@
       background: white; padding: 10px 16px; border-radius: 10px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.2); font-size: 0.85rem;
     }
+    #welcome-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.85); z-index: 3000;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #welcome-overlay.hidden { display: none; }
+    .welcome-box {
+      background: white; border-radius: 20px; padding: 40px;
+      max-width: 450px; width: 90%; text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .welcome-box h2 { color: #2c3e50; margin-bottom: 15px; font-size: 1.5rem; }
+    .welcome-box p { color: #7f8c8d; margin-bottom: 12px; font-size: 0.95rem; line-height: 1.5; }
+    .welcome-box .highlight { color: #e74c3c; font-weight: bold; }
+    .welcome-btn {
+      width: 100%; padding: 14px; background: #e74c3c; color: white;
+      border: none; border-radius: 12px; font-size: 1rem; cursor: pointer;
+      transition: background 0.3s; margin-top: 15px;
+    }
+    .welcome-btn:hover { background: #c0392b; }
     #login-overlay {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(0,0,0,0.7); z-index: 2000;
@@ -104,6 +124,15 @@
   </style>
 </head>
 <body>
+  <div id="welcome-overlay">
+    <div class="welcome-box">
+      <h2>🏴‍☠️ RunToOnePiece</h2>
+      <p>Le but de l'application est simple : <span class="highlight">rapprochez-vous des balises anonymes</span> pour les déverrouiller et obtenir des personnages issus de l'univers de One Piece.</p>
+      <p>Au total, <span class="highlight">100 personnages</span> sont à collectionner.</p>
+      <button class="welcome-btn" onclick="closeWelcome()">Commencer l'aventure</button>
+    </div>
+  </div>
+
   <div id="login-overlay">
     <div class="login-box">
       <h2>🏴‍☠️ RunToOnePiece</h2>
@@ -182,6 +211,10 @@
                 Math.cos(φ1) * Math.cos(φ2) *
                 Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
       return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function closeWelcome() {
+      document.getElementById('welcome-overlay').classList.add('hidden');
     }
 
     async function login() {
