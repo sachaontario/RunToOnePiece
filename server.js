@@ -48,6 +48,10 @@ app.get("/roster", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "roster.html"));
 });
 
+app.get("/admin", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "admin.html"));
+});
+
 app.get("/scan/:id", (req, res) => {
   const id = parseInt(req.params.id);
   const c = characters.find(ch => ch.id === id);
@@ -125,6 +129,27 @@ app.get("/api/user/captures", (req, res) => {
 app.post("/api/logout", (req, res) => {
   res.clearCookie("userId");
   res.json({ success: true });
+});
+
+app.get("/api/admin/users", (req, res) => {
+  const userId = req.cookies.userId;
+  const user = getUser.get(userId);
+  
+  if (!user || user.email !== "xxwarkelxx@gmail.com") {
+    return res.status(403).json({ error: "Accès non autorisé" });
+  }
+  
+  const allUsers = db.prepare("SELECT * FROM users ORDER BY created_at DESC").all();
+  const usersData = allUsers.map(u => {
+    const captures = db.prepare("SELECT COUNT(*) as count FROM captures WHERE user_id = ?").get(u.id);
+    return {
+      email: u.email,
+      captures: captures.count,
+      created_at: u.created_at
+    };
+  });
+  
+  res.json(usersData);
 });
 
 app.listen(PORT, () => {

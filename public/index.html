@@ -149,6 +149,7 @@
   <div id="nav">
     <a href="/">🏴‍☠️ Carte</a>
     <a href="/roster">📖 Ma Collection</a>
+    <a href="/admin" id="admin-link" style="display:none;">⚙️ Admin</a>
   </div>
   <div id="user-info" style="display:none;">
     <span id="user-email"></span>
@@ -240,6 +241,11 @@
         document.getElementById('user-info').style.display = 'flex';
         document.getElementById('gps-refresh').style.display = 'block';
         document.getElementById('user-email').textContent = email;
+        
+        if (email === 'xxwarkelxx@gmail.com') {
+          document.getElementById('admin-link').style.display = 'inline';
+        }
+        
         loadCaptures();
         startGPS();
       } catch (e) {
@@ -269,6 +275,11 @@
         document.getElementById('user-info').style.display = 'flex';
         document.getElementById('gps-refresh').style.display = 'block';
         document.getElementById('user-email').textContent = email;
+        
+        if (email === 'xxwarkelxx@gmail.com') {
+          document.getElementById('admin-link').style.display = 'inline';
+        }
+        
         loadCaptures();
         startGPS();
       } catch (e) {
