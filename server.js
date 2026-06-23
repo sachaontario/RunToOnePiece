@@ -49,6 +49,13 @@ app.get("/roster", (req, res) => {
 });
 
 app.get("/admin", (req, res) => {
+  const userId = req.cookies.userId;
+  const user = getUser.get(userId);
+  
+  if (!user || user.email !== "xxwarkelxx@gmail.com") {
+    return res.redirect('/');
+  }
+  
   res.sendFile(path.join(__dirname, "public", "admin.html"));
 });
 
