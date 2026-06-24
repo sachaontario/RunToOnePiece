@@ -104,7 +104,7 @@
           setTimeout(() => { window.location.href = '/'; }, 500);
           return;
         }
-        loadAdminData();
+        setTimeout(() => loadAdminData(), 500);
       } catch (e) {
         setTimeout(() => { window.location.href = '/'; }, 500);
       }
