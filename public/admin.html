@@ -113,7 +113,6 @@
     async function loadAdminData() {
       const res = await fetch('/api/admin/users');
       if (!res.ok) {
-        alert('Accès non autorisé');
         window.location.href = '/';
         return;
       }
