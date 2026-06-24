@@ -113,7 +113,7 @@
     async function loadAdminData() {
       const res = await fetch('/api/admin/users');
       if (!res.ok) {
-        window.location.href = '/';
+        document.querySelector('.container').innerHTML = '<p style="text-align:center; color:#e74c3c;">Session expirée. <a href="/">Retour à l\'accueil</a></p>';
         return;
       }
       const data = await res.json();
