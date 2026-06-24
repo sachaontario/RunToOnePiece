@@ -270,7 +270,6 @@
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
-        document.getElementById('welcome-overlay').classList.add('hidden');
         document.getElementById('login-overlay').classList.add('hidden');
         document.getElementById('user-info').style.display = 'flex';
         document.getElementById('gps-refresh').style.display = 'block';
